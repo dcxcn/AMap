@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Mapbox3D渐变色测试</title>
+    <meta charset='utf-8'>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <script src="./mapbox-gl.js"></script>
+    <link href="./mapbox-gl.css" rel="stylesheet" />
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body,
+        #map {
+            height: 100%;
+        }
+
+        .layerPanel {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            background: #ffffff;
+            padding: 5px 2px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id='map'></div>
+    <script>
+        let tdt = true;
+        let layer_geoVt = false;
+        let layer_wmts = false;
+        let curr = '';
+        let center = [116.39, 39.91];
+        //获取地图样式
+        let style = getStyle();
+        //创建3857坐标系地图
+        var map = window.map = new mapboxgl.Map({
+            container: 'map',
+            // epsg: 'EPSG:3857',
+            center: center,//[120.5658, 31.3857],
+            zoom: 12,
+            hash: true,
+            style: style
+        });
+        //实例化导航控件
+        var nav = new mapboxgl.NavigationControl(
+            {
+                //是否显示指南针，默认为true
+                "showCompass": true,
+                //是否显示缩放按钮，默认为true
+                "showZoom": true
+            }
+        );
+        //添加导航控件，控件的位置包括'top-left', 'top-right','bottom-left' ,'bottom-right'四种，默认为'top-right'
+        map.addControl(nav, 'top-left');
+        map.addControl(new mapboxgl.FullscreenControl(), "top-right");
+        map.addControl(new mapboxgl.ScaleControl(), "bottom-left");
+
+        // map.showTileBoundaries = true;
+        map.on('load', function () {
+            //添加底图
+           
+            map.addLayer({
+                "type": "circle",
+                "source": "test",
+                "paint": {
+                    "circle-color": "red",
+                    "circle-radius": 4,
+                },
+                "source-layer": "zf_point",
+                "maxzoom": 14,
+                "id": "1"
+            })
+            map.addLayer({
+                "type": "line",
+                "source": "test",
+                "source-layer": "line",
+                "maxzoom": 14,
+                "id": "2",
+                "layout": { "line-join": "miter", "line-miter-limit": 2, "line-round-limit": 1.05 }, "paint": { "line-color": "#5028D5" }
+            })
+            map.addLayer({
+                "type": "fill",
+                "source": "china",               
+                "maxzoom": 20,
+                "id": "china",
+                "paint": { "fill-color": "#F8F8F8", "fill-outline-color": "#BEBEBE" }
+            })
+            map.addLayer({
+                "type": "fill",
+                "source": "beijing",               
+                "maxzoom": 20,
+                "id": "beijing",
+                "paint": { "fill-color": "#F8F8F8", "fill-outline-color": "#BEBEBE" }
+            })
+            map.addLayer({
+                "id": "chinalbl",
+                "type": "symbol",
+                "source": "china",               
+                "maxzoom": 7,
+                "layout": {
+                    "text-font": ["Open Sans Semibold"],
+                    "text-size": 13.3333,
+                    "text-anchor": "center",
+                    "text-max-width": 8,
+                    "text-field": "{name}",
+                    "text-optional": true
+                },
+                "paint": {
+                    "text-color": "#BEBEBE"
+                }
+            })
+            map.addLayer({
+                "id": "beijinglbl",
+                "type": "symbol",
+                "source": "beijing",               
+                "minzoom": 7,
+                "layout": {
+                    "text-font": ["Open Sans Semibold"],
+                    "text-size": 13.3333,
+                    "text-anchor": "center",
+                    "text-max-width": 8,
+                    "text-field": "{name}",
+                    "text-optional": true
+                },
+                "paint": {
+                    "text-color": "#BEBEBE"
+                }
+            })
+            map.addLayer({
+                "id": "4",
+                "type": "symbol",
+                "source": "test",
+                "source-layer": "zf_point",
+                "minzoom": 7.94,
+                "layout": {
+                    "text-font": ["Open Sans Semibold"],
+                    "text-size": 13.3333,
+                    "text-anchor": "center",
+                    "text-max-width": 8,
+                    "text-field": "{name}",
+                    "text-optional": true
+                },
+                "paint": {
+                    "text-color": "#FF0000"
+                }
+            })
+
+            map.addLayer({
+                'id': '3d-buildings',
+                'source': 'building',
+                'source-layer': 'building_polygon',
+                //'filter': ['==', 'extrude', 'true'],
+                'type': 'fill-extrusion',
+                'minzoom': 15,
+                'paint': {
+                    'fill-extrusion-color': [
+                        "interpolate",
+                        ["exponential", 0.99],
+                        ["get", "height"],
+                        0,
+                        "#52e5e7",
+                        500,
+                        "#130cb7"
+                    ],
+                    // use an 'interpolate' expression to add a smooth transition effect to the
+                    // buildings as the user zooms in
+                    'fill-extrusion-height': [
+                        'interpolate',
+                        ['linear'],
+                        ['zoom'],
+                        15,
+                        0,
+                        15.05,
+                        ['get', 'height']
+                    ],
+                    'fill-extrusion-base': [
+                        'interpolate',
+                        ['linear'],
+                        ['zoom'],
+                        15,
+                        0,
+                        15.05,
+                        ['get', 'min_height']
+                    ],
+                    'fill-extrusion-opacity': 0.6
+                }
+            })
+
+
+            map.on('click', '3d-buildings', function (e) {
+                new mapboxgl.Popup()
+                    .setLngLat(e.lngLat)
+                    .setHTML(e.features[0].properties.height)
+                    .addTo(map);
+            });
+        });
+
+        function getStyle() {
+            let style = {
+                "version": 8,
+                "name": "Basic-my",
+                "metadata": {
+                    "mapbox:autocomposite": true,
+                    "mapbox:type": "template"
+                },
+                "center": center,
+                "zoom": 3,
+                "bearing": 0,
+                "pitch": 0,
+                "sources": {
+                    "china":{
+                        "type":"geojson",
+                        "data":"./geojson/100000_full.json"
+                    },
+                    "beijing":{
+                        "type":"geojson",
+                        "data":"./geojson/110000_full.json"
+                    },
+                    "test": {
+                        "type": "vector",
+						"scheme":"tms",
+                        "tiles": ["http://127.0.0.1:8080/geoserver/gwc/service/tms/1.0.0/dcx%3Azf_point@EPSG%3A900913@pbf/{z}/{x}/{y}.pbf"]
+                    },
+                    "building": {
+                        "type": "vector",
+						"scheme":"tms",
+                        "tiles": ["http://127.0.0.1:8080/geoserver/gwc/service/tms/1.0.0/dcx%3Abuilding_polygon@EPSG%3A900913@pbf/{z}/{x}/{y}.pbf"]
+                    }
+                },
+                "glyphs": location.origin + location.pathname + "font/{fontstack}/{range}.pbf",
+                "layers": [],
+                "created": "2017-09-18T02:18:17.059Z",
+                "id": "cj7pjk1qrc3k92so5dn7vp6yc",
+                "modified": "2017-09-18T02:36:38.832Z",
+                "owner": "小刘先森",
+                "visibility": "private",
+                "draft": false
+            };
+            return style;
+        }
+     
+
+    </script>
+</body>
+
+</html>
